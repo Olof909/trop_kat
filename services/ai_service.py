@@ -1,7 +1,13 @@
 import json
-import anthropic
+import os
+from openai import OpenAI
 
-_client = anthropic.Anthropic()
+_client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.environ["OPENROUTER_API_KEY"],
+)
+
+MODEL = os.environ.get("OPENROUTER_MODEL", "openai/gpt-4o-mini")
 
 _SYSTEM_PROMPT = (
     "Είσαι νομικός βοηθός που εξειδικεύεται στη σύνταξη και τροποποίηση καταστατικών "
@@ -10,29 +16,32 @@ _SYSTEM_PROMPT = (
 )
 
 _MODIFY_TOOL = {
-    "name": "apply_modifications",
-    "description": (
-        "Εφαρμόζει τις ζητούμενες τροποποιήσεις στα άρθρα του καταστατικού. "
-        "Επίστρεψε μόνο τα άρθρα που άλλαξαν."
-    ),
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "modified_articles": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "id": {"type": "integer", "description": "Αριθμός άρθρου"},
-                        "title": {"type": "string", "description": "Τίτλος άρθρου"},
-                        "content": {"type": "string", "description": "Νέο περιεχόμενο άρθρου"},
+    "type": "function",
+    "function": {
+        "name": "apply_modifications",
+        "description": (
+            "Εφαρμόζει τις ζητούμενες τροποποιήσεις στα άρθρα του καταστατικού. "
+            "Επίστρεψε μόνο τα άρθρα που άλλαξαν."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "modified_articles": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "id": {"type": "integer", "description": "Αριθμός άρθρου"},
+                            "title": {"type": "string", "description": "Τίτλος άρθρου"},
+                            "content": {"type": "string", "description": "Νέο περιεχόμενο άρθρου"},
+                        },
+                        "required": ["id", "title", "content"],
                     },
-                    "required": ["id", "title", "content"],
-                },
-                "description": "Λίστα τροποποιημένων άρθρων",
-            }
+                    "description": "Λίστα τροποποιημένων άρθρων",
+                }
+            },
+            "required": ["modified_articles"],
         },
-        "required": ["modified_articles"],
     },
 }
 
@@ -51,29 +60,20 @@ def apply_ai_modifications(articles: list[dict], instruction: str) -> list[dict]
         "μόνο τα άρθρα που χρειάζονται αλλαγή."
     )
 
-    response = _client.messages.create(
-        model="claude-opus-4-7",
-        max_tokens=8192,
-        thinking={"type": "adaptive"},
-        system=[
-            {
-                "type": "text",
-                "text": _SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
-            }
+    response = _client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "user", "content": user_message},
         ],
         tools=[_MODIFY_TOOL],
-        tool_choice={"type": "tool", "name": "apply_modifications"},
-        messages=[{"role": "user", "content": user_message}],
+        tool_choice={"type": "function", "function": {"name": "apply_modifications"}},
     )
 
-    for block in response.content:
-        if block.type == "tool_use" and block.name == "apply_modifications":
-            changed = {a["id"]: a for a in block.input["modified_articles"]}
-            result = []
-            for article in articles:
-                aid = article["id"]
-                result.append(changed.get(aid, article))
-            return result
+    message = response.choices[0].message
+    if message.tool_calls:
+        args = json.loads(message.tool_calls[0].function.arguments)
+        changed = {a["id"]: a for a in args["modified_articles"]}
+        return [changed.get(a["id"], a) for a in articles]
 
     return articles
