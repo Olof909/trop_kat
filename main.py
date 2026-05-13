@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from services.docx_parser import parse_bylaws
 from services.docx_generator import generate_docx
 from services.diff_service import compute_diff
+from services.ai_service import apply_ai_modifications
 
 app = FastAPI(title="Τροποποίηση Καταστατικών")
 
@@ -34,6 +35,11 @@ class GenerateRequest(BaseModel):
 class DiffRequest(BaseModel):
     original: list[Article]
     modified: list[Article]
+
+
+class AIModifyRequest(BaseModel):
+    articles: list[Article]
+    instruction: str
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -77,3 +83,15 @@ async def generate(req: GenerateRequest):
 async def diff(req: DiffRequest):
     result = compute_diff(req.original, req.modified)
     return {"diff": result}
+
+
+@app.post("/api/ai-modify")
+async def ai_modify(req: AIModifyRequest):
+    if not req.instruction.strip():
+        raise HTTPException(status_code=400, detail="Η οδηγία δεν μπορεί να είναι κενή")
+    try:
+        articles_dicts = [a.model_dump() for a in req.articles]
+        modified = apply_ai_modifications(articles_dicts, req.instruction)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Σφάλμα AI: {str(e)}")
+    return {"articles": modified}

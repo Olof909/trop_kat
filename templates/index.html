@@ -257,6 +257,45 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* AI Panel */
+    .ai-panel {
+      background: linear-gradient(135deg, #f0f4ff 0%, #f8f0ff 100%);
+      border: 1.5px solid #c5b8f7;
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .ai-panel-icon { font-size: 1.5rem; flex-shrink: 0; margin-top: 2px; }
+    .ai-panel-body { flex: 1; }
+    .ai-panel-body label {
+      display: block;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #4a3a8a;
+      margin-bottom: 8px;
+    }
+    .ai-instruction-row { display: flex; gap: 10px; align-items: flex-start; }
+    .ai-instruction-input {
+      flex: 1;
+      padding: 9px 12px;
+      border: 1.5px solid #c5b8f7;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+      line-height: 1.5;
+      resize: vertical;
+      min-height: 60px;
+      color: #1a1a2e;
+      background: #fff;
+      transition: border-color 0.2s;
+    }
+    .ai-instruction-input:focus { border-color: #7c5cbf; outline: none; box-shadow: 0 0 0 3px rgba(124,92,191,0.12); }
+    .btn-ai { background: #7c5cbf; color: #fff; }
+    .btn-ai:hover { opacity: 0.9; }
+
     .empty-state {
       text-align: center;
       padding: 60px 20px;
@@ -308,6 +347,19 @@
           <input type="text" id="docTitle" value="Καταστατικό" />
         </div>
       </div>
+      <!-- AI Modification Panel -->
+      <div class="ai-panel">
+        <div class="ai-panel-icon">🤖</div>
+        <div class="ai-panel-body">
+          <label for="aiInstruction">Αυτόματη τροποποίηση με AI — δώστε οδηγία στα ελληνικά:</label>
+          <div class="ai-instruction-row">
+            <textarea id="aiInstruction" class="ai-instruction-input" rows="2"
+              placeholder="π.χ. «Αντικατέστησε το Άρθρο 5 με το αντίστοιχο για ΙΚΕ αντί ΑΕ» ή «Πρόσθεσε άρθρο για τη διαχείριση κρίσεων»"></textarea>
+            <button class="btn btn-ai" id="aiBtn" onclick="applyAI()">✨ Εφαρμογή AI</button>
+          </div>
+        </div>
+      </div>
+
       <div class="articles-list" id="articlesList"></div>
       <button class="add-article-btn" onclick="addArticle()">＋ Προσθήκη νέου άρθρου</button>
     </div>
@@ -588,6 +640,44 @@
 
     section.innerHTML = '';
     section.appendChild(container);
+  }
+
+  // ── AI Modify ─────────────────────────────────────────────────────────────────
+  async function applyAI() {
+    const instruction = document.getElementById('aiInstruction').value.trim();
+    if (!instruction) {
+      alert('Γράψτε πρώτα μια οδηγία.');
+      return;
+    }
+
+    const btn = document.getElementById('aiBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Επεξεργασία...';
+
+    const payload = {
+      articles: getCurrentArticles(),
+      instruction,
+    };
+
+    try {
+      const res = await fetch('/api/ai-modify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Σφάλμα AI');
+      }
+      const data = await res.json();
+      renderArticles(data.articles);
+      document.getElementById('aiInstruction').value = '';
+    } catch (err) {
+      alert('Σφάλμα AI: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '✨ Εφαρμογή AI';
+    }
   }
 
   // ── Tabs ──────────────────────────────────────────────────────────────────────
