@@ -1,3 +1,3 @@
 pip install -r requirements.txt
-set OPENROUTER_API_KEY=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
+set OPENROUTER_API_KEY=your-openrouter-api-key-here
 uvicorn main:app --reload
