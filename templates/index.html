@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Τροποποίηση Καταστατικών</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: #f4f6f9;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    header h1 { font-size: 1.3rem; font-weight: 600; letter-spacing: 0.5px; }
+    header .subtitle { font-size: 0.8rem; opacity: 0.6; margin-top: 2px; }
+
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+    }
+    .tab-btn {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 6px 6px 0 0;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    }
+    .tab-btn.active { background: rgba(255,255,255,0.25); font-weight: 600; }
+    .tab-btn:hover:not(.active) { background: rgba(255,255,255,0.15); }
+
+    main { max-width: 1100px; margin: 32px auto; padding: 0 24px; }
+
+    /* Upload zone */
+    .upload-zone {
+      border: 2px dashed #c0c8d8;
+      border-radius: 12px;
+      padding: 48px 32px;
+      text-align: center;
+      background: #fff;
+      transition: border-color 0.2s, background 0.2s;
+      cursor: pointer;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: #4a6cf7;
+      background: #f0f4ff;
+    }
+    .upload-zone .icon { font-size: 3rem; margin-bottom: 12px; }
+    .upload-zone p { color: #666; margin-top: 8px; font-size: 0.95rem; }
+    .upload-zone strong { color: #4a6cf7; }
+    #fileInput { display: none; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 20px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: #4a6cf7; color: #fff; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-success { background: #28a745; color: #fff; }
+    .btn-success:hover { opacity: 0.9; }
+    .btn-danger { background: #dc3545; color: #fff; }
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid #4a6cf7;
+      color: #4a6cf7;
+    }
+    .btn-outline:hover { background: #f0f4ff; }
+    .btn-sm { padding: 5px 12px; font-size: 0.82rem; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .toolbar .doc-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+    .toolbar .doc-title-wrap label { font-size: 0.85rem; color: #555; white-space: nowrap; }
+    .toolbar input[type="text"] {
+      padding: 7px 12px;
+      border: 1.5px solid #d0d8e8;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      width: 240px;
+    }
+
+    /* Article cards */
+    .articles-list { display: flex; flex-direction: column; gap: 16px; }
+
+    .article-card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      border: 1.5px solid #e4eaf4;
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
+    .article-card:hover { box-shadow: 0 3px 12px rgba(74,108,247,0.12); }
+
+    .article-header {
+      display: flex;
+      align-items: center;
+      padding: 12px 18px;
+      background: #f8faff;
+      border-bottom: 1px solid #e4eaf4;
+      gap: 10px;
+    }
+    .article-num {
+      background: #4a6cf7;
+      color: #fff;
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .article-title-input {
+      flex: 1;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      background: transparent;
+      color: #1a1a2e;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .article-title-input:hover, .article-title-input:focus {
+      border-color: #4a6cf7;
+      background: #fff;
+      outline: none;
+    }
+    .article-actions { display: flex; gap: 6px; margin-left: auto; }
+
+    .article-body { padding: 14px 18px; }
+    .article-content-textarea {
+      width: 100%;
+      min-height: 100px;
+      border: 1px solid #d0d8e8;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      resize: vertical;
+      font-family: inherit;
+      color: #2d2d2d;
+      transition: border-color 0.2s;
+    }
+    .article-content-textarea:focus {
+      border-color: #4a6cf7;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(74,108,247,0.1);
+    }
+
+    /* Add article button */
+    .add-article-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 14px;
+      border: 2px dashed #c0c8d8;
+      border-radius: 10px;
+      background: transparent;
+      color: #4a6cf7;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+    .add-article-btn:hover { border-color: #4a6cf7; background: #f0f4ff; }
+
+    /* Diff view */
+    .diff-container { background: #fff; border-radius: 10px; padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .diff-article { margin-bottom: 24px; }
+    .diff-article-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .diff-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 2px 9px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge-added { background: #d4edda; color: #155724; }
+    .badge-deleted { background: #f8d7da; color: #721c24; }
+    .badge-modified { background: #fff3cd; color: #856404; }
+    .badge-unchanged { background: #e9ecef; color: #6c757d; }
+    .diff-lines { font-family: "Courier New", monospace; font-size: 0.85rem; line-height: 1.6; border-radius: 6px; overflow: hidden; border: 1px solid #e4eaf4; }
+    .diff-line { padding: 2px 12px; white-space: pre-wrap; word-break: break-word; }
+    .diff-line.added { background: #e6ffec; color: #1a4731; }
+    .diff-line.removed { background: #ffebe9; color: #67060c; }
+    .diff-line.equal { background: #fff; color: #444; }
+    .diff-empty { color: #999; font-style: italic; font-size: 0.85rem; padding: 6px 0; }
+
+    /* Tabs */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Alert */
+    .alert {
+      padding: 12px 18px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 0.9rem;
+    }
+    .alert-info { background: #cce5ff; color: #004085; border: 1px solid #b8daff; }
+    .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.4);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Τροποποίηση Καταστατικών</h1>
+    <div class="subtitle">Επεξεργασία &amp; έκδοση τροποποιημένου καταστατικού</div>
+  </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('editor')">Επεξεργασία</button>
+    <button class="tab-btn" onclick="switchTab('diff')">Σύγκριση (Diff)</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- EDITOR TAB -->
+  <div id="tab-editor" class="tab-content active">
+
+    <!-- Upload zone (shown when no doc loaded) -->
+    <div id="uploadSection">
+      <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="icon">📄</div>
+        <p><strong>Κάντε κλικ ή σύρετε</strong> ένα αρχείο .docx εδώ</p>
+        <p>για να φορτώσετε το καταστατικό</p>
+      </div>
+      <input type="file" id="fileInput" accept=".docx" onchange="handleFileSelect(event)" />
+    </div>
+
+    <!-- Editor (shown after upload) -->
+    <div id="editorSection" style="display:none;">
+      <div class="toolbar">
+        <button class="btn btn-outline" onclick="resetToUpload()">⬅ Νέο αρχείο</button>
+        <button class="btn btn-primary" id="diffBtn" onclick="runDiff()" disabled>
+          🔍 Σύγκριση αλλαγών
+        </button>
+        <button class="btn btn-success" id="exportBtn" onclick="exportDocx()">
+          ⬇ Εξαγωγή .docx
+        </button>
+        <div class="doc-title-wrap">
+          <label for="docTitle">Τίτλος εγγράφου:</label>
+          <input type="text" id="docTitle" value="Καταστατικό" />
+        </div>
+      </div>
+      <div class="articles-list" id="articlesList"></div>
+      <button class="add-article-btn" onclick="addArticle()">＋ Προσθήκη νέου άρθρου</button>
+    </div>
+
+  </div>
+
+  <!-- DIFF TAB -->
+  <div id="tab-diff" class="tab-content">
+    <div id="diffSection">
+      <div class="empty-state">
+        <div class="icon">🔍</div>
+        <p>Πατήστε «Σύγκριση αλλαγών» στην καρτέλα Επεξεργασία για να δείτε το diff.</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  let originalArticles = [];   // as loaded from docx
+  let nextId = 1;
+
+  // ── Drag & Drop ──────────────────────────────────────────────────────────────
+  const dropZone = document.getElementById('dropZone');
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) uploadFile(file);
+  });
+
+  function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) uploadFile(file);
+  }
+
+  async function uploadFile(file) {
+    if (!file.name.endsWith('.docx')) {
+      alert('Παρακαλώ επιλέξτε αρχείο .docx');
+      return;
+    }
+    dropZone.innerHTML = '<div class="icon"><span class="spinner" style="width:32px;height:32px;border-color:rgba(0,0,0,0.2);border-top-color:#4a6cf7;"></span></div><p>Φόρτωση...</p>';
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Σφάλμα φόρτωσης');
+      }
+      const data = await res.json();
+      originalArticles = JSON.parse(JSON.stringify(data.articles));
+      renderArticles(data.articles);
+      document.getElementById('uploadSection').style.display = 'none';
+      document.getElementById('editorSection').style.display = 'block';
+      document.getElementById('diffBtn').disabled = false;
+    } catch (err) {
+      alert('Σφάλμα: ' + err.message);
+      resetUploadZone();
+    }
+  }
+
+  function resetUploadZone() {
+    dropZone.innerHTML = `
+      <div class="icon">📄</div>
+      <p><strong>Κάντε κλικ ή σύρετε</strong> ένα αρχείο .docx εδώ</p>
+      <p>για να φορτώσετε το καταστατικό</p>`;
+  }
+
+  function resetToUpload() {
+    if (!confirm('Θέλετε να φορτώσετε νέο αρχείο; Οι αλλαγές σας θα χαθούν.')) return;
+    originalArticles = [];
+    resetUploadZone();
+    document.getElementById('fileInput').value = '';
+    document.getElementById('uploadSection').style.display = 'block';
+    document.getElementById('editorSection').style.display = 'none';
+    document.getElementById('diffBtn').disabled = true;
+    document.getElementById('diffSection').innerHTML = `
+      <div class="empty-state">
+        <div class="icon">🔍</div>
+        <p>Πατήστε «Σύγκριση αλλαγών» στην καρτέλα Επεξεργασία για να δείτε το diff.</p>
+      </div>`;
+  }
+
+  // ── Render articles ───────────────────────────────────────────────────────────
+  function renderArticles(articles) {
+    const list = document.getElementById('articlesList');
+    list.innerHTML = '';
+    if (!articles.length) {
+      list.innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>Δεν βρέθηκαν άρθρα.</p></div>';
+      return;
+    }
+    articles.forEach(a => list.appendChild(createArticleCard(a)));
+    nextId = Math.max(...articles.map(a => a.id), 0) + 1;
+  }
+
+  function createArticleCard(article) {
+    const card = document.createElement('div');
+    card.className = 'article-card';
+    card.dataset.id = article.id;
+
+    const labelText = article.id === 0 ? 'Προοίμιο' : `Άρθρο ${article.id}`;
+
+    card.innerHTML = `
+      <div class="article-header">
+        <span class="article-num">${labelText}</span>
+        <input class="article-title-input" type="text" value="${escapeAttr(article.title)}" placeholder="Τίτλος άρθρου" />
+        <div class="article-actions">
+          <button class="btn btn-outline btn-sm" title="Μετακίνηση πάνω" onclick="moveArticle(this, -1)">↑</button>
+          <button class="btn btn-outline btn-sm" title="Μετακίνηση κάτω" onclick="moveArticle(this, 1)">↓</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteArticle(this)">✕ Διαγραφή</button>
+        </div>
+      </div>
+      <div class="article-body">
+        <textarea class="article-content-textarea" rows="5" placeholder="Κείμενο άρθρου...">${escapeHtml(article.content)}</textarea>
+      </div>`;
+    return card;
+  }
+
+  function escapeHtml(str) {
+    return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function escapeAttr(str) {
+    return (str || '').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // ── Article CRUD ──────────────────────────────────────────────────────────────
+  function addArticle() {
+    const list = document.getElementById('articlesList');
+    // Remove empty-state if present
+    const empty = list.querySelector('.empty-state');
+    if (empty) empty.remove();
+
+    const article = { id: nextId++, title: `Άρθρο ${nextId - 1}`, content: '' };
+    list.appendChild(createArticleCard(article));
+    list.lastElementChild.querySelector('textarea').focus();
+  }
+
+  function deleteArticle(btn) {
+    const card = btn.closest('.article-card');
+    const title = card.querySelector('.article-title-input').value || `Άρθρο ${card.dataset.id}`;
+    if (!confirm(`Διαγραφή "${title}";`)) return;
+    card.remove();
+  }
+
+  function moveArticle(btn, direction) {
+    const card = btn.closest('.article-card');
+    const list = card.parentElement;
+    const cards = [...list.querySelectorAll('.article-card')];
+    const idx = cards.indexOf(card);
+    const target = cards[idx + direction];
+    if (!target) return;
+    if (direction === -1) list.insertBefore(card, target);
+    else list.insertBefore(target, card);
+  }
+
+  // ── Read current articles from DOM ───────────────────────────────────────────
+  function getCurrentArticles() {
+    const cards = document.querySelectorAll('.article-card');
+    return [...cards].map((card, i) => ({
+      id: parseInt(card.dataset.id, 10),
+      title: card.querySelector('.article-title-input').value.trim(),
+      content: card.querySelector('textarea').value.trim(),
+    }));
+  }
+
+  // ── Export .docx ──────────────────────────────────────────────────────────────
+  async function exportDocx() {
+    const btn = document.getElementById('exportBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span> Δημιουργία...';
+
+    const payload = {
+      articles: getCurrentArticles(),
+      document_title: document.getElementById('docTitle').value || 'Καταστατικό',
+    };
+
+    try {
+      const res = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('Σφάλμα εξαγωγής');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'τροποποιημένο_καταστατικό.docx';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Σφάλμα: ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '⬇ Εξαγωγή .docx';
+    }
+  }
+
+  // ── Diff ──────────────────────────────────────────────────────────────────────
+  async function runDiff() {
+    const modified = getCurrentArticles();
+    const payload = { original: originalArticles, modified };
+
+    try {
+      const res = await fetch('/api/diff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('Σφάλμα σύγκρισης');
+      const data = await res.json();
+      renderDiff(data.diff);
+      switchTab('diff');
+    } catch (err) {
+      alert('Σφάλμα: ' + err.message);
+    }
+  }
+
+  function renderDiff(diffData) {
+    const section = document.getElementById('diffSection');
+
+    const changed = diffData.filter(d => d.status !== 'unchanged');
+    if (!changed.length) {
+      section.innerHTML = '<div class="alert alert-info">Δεν υπάρχουν αλλαγές σε σχέση με το αρχικό αρχείο.</div>';
+      return;
+    }
+
+    const container = document.createElement('div');
+    container.className = 'diff-container';
+
+    const summary = document.createElement('div');
+    summary.className = 'alert alert-warning';
+    const counts = { added: 0, deleted: 0, modified: 0 };
+    changed.forEach(d => counts[d.status] = (counts[d.status] || 0) + 1);
+    summary.textContent = `Αλλαγές: ${counts.modified || 0} τροποποιημένα · ${counts.added || 0} νέα · ${counts.deleted || 0} διαγραμμένα άρθρα`;
+    container.appendChild(summary);
+
+    diffData.forEach(item => {
+      const block = document.createElement('div');
+      block.className = 'diff-article';
+
+      const badgeMap = { added: 'Νέο', deleted: 'Διαγράφηκε', modified: 'Τροποποιήθηκε', unchanged: 'Αμετάβλητο' };
+      const badgeCls = { added: 'badge-added', deleted: 'badge-deleted', modified: 'badge-modified', unchanged: 'badge-unchanged' };
+
+      let headerHtml = `
+        <div class="diff-article-header">
+          <strong>Άρθρο ${item.id} – ${escapeHtml(item.title)}</strong>
+          <span class="diff-badge ${badgeCls[item.status]}">${badgeMap[item.status]}</span>`;
+
+      if (item.title_changed) {
+        headerHtml += `<span style="font-size:0.8rem;color:#856404">Τίτλος: «${escapeHtml(item.old_title)}» → «${escapeHtml(item.title)}»</span>`;
+      }
+      headerHtml += '</div>';
+      block.innerHTML = headerHtml;
+
+      if (item.status === 'unchanged') {
+        block.innerHTML += '<p class="diff-empty">Χωρίς αλλαγές</p>';
+      } else {
+        const linesDiv = document.createElement('div');
+        linesDiv.className = 'diff-lines';
+        item.content_diff.forEach(line => {
+          const div = document.createElement('div');
+          div.className = 'diff-line ' + line.type;
+          const prefix = line.type === 'added' ? '+ ' : line.type === 'removed' ? '- ' : '  ';
+          div.textContent = prefix + line.text;
+          linesDiv.appendChild(div);
+        });
+        block.appendChild(linesDiv);
+      }
+
+      container.appendChild(block);
+    });
+
+    section.innerHTML = '';
+    section.appendChild(container);
+  }
+
+  // ── Tabs ──────────────────────────────────────────────────────────────────────
+  function switchTab(name) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.querySelector(`.tab-btn[onclick="switchTab('${name}')"]`).classList.add('active');
+  }
+</script>
+</body>
+</html>
